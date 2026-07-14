@@ -128,11 +128,12 @@ def auto_save(path,box):
 #a function to call on auto save
 def check_update(path):
     global saving, change, editor
-    #get the data from the file and check if it is the same
-    with open(path, 'r') as f:
-        data = str(f.read())
-        if data == editor.get("1.0", tk.END):
-            change = False
+    #get the data from the file and check if it is the same and make sure that it is not reading the file
+    if not saving:
+        with open(path, 'r') as f:
+            data = str(f.read())
+            if data == editor.get("1.0", tk.END):
+                change = False
 
     #check if it is not already saving and if the data is changed
     if change and not saving and check:
@@ -140,7 +141,7 @@ def check_update(path):
         saving = True
         change = False
     #check if there is a path
-    if path and check:
+    if path and check.get():
         #start a thread
         threading.Thread(
             target=auto_save, 
