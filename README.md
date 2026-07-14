@@ -8,6 +8,6 @@
 - making files
 
 # why it is called cloud editor
-it is not called cloud editor because it is streamed to your computer
-it is called cloud editor because it runs as light as a cloud
+it is not called cloud editor because it is streamed to your computer <br>
+it is called cloud editor because it runs as light as a cloud <br>
 maybe not because it is made in python 
