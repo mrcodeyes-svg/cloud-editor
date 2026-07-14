@@ -1,6 +1,3 @@
-# what will be added
-- custom shortcuts that let you navgate around without a mouse
-
 # what is added
 - a setting to enable auto save
 - saving and loading files
