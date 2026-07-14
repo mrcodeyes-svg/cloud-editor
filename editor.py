@@ -22,6 +22,21 @@ saving = False
 #a label telling you which folder you are in
 in_path = tk.Label(root, text="folder path: None")
 
+#a check button to check auto save and add a settings.json
+try:
+     with open('settings.json', 'r') as f:
+        data = json.load(f)
+        check = data['check']
+        check = tk.IntVar(value=check)
+except Exception:
+    #make the data
+    data = {'check': 0}
+    #open it and write to it
+    with open('settings.json', 'w') as f:
+        json.dump(data, f, indent=4)
+        check = 0
+        check = tk.IntVar(value=check)
+
 #make a function to get the file or folder
 def get_file(box = tk.Text, type= ""):
     global file, folder
@@ -78,7 +93,7 @@ def save_state():
 
 #make a function that opens a settings window
 def open_settings():
-    global check, main_check
+    global check, main_check, save
     #make a new window
     seting = tk.Toplevel(root)
     seting.title('settings')
@@ -93,20 +108,6 @@ def open_settings():
     create = tk.Button(seting, text='create file', command = lambda: make_file(folder))
     #a delete window button
     delete_win = tk.Button(seting, text="\u2716", command = seting.destroy)
-    #a check button to check auto save and add a settings.json
-    try:
-        with open('settings.json', 'r') as f:
-            data = json.load(f)
-            check = data['check']
-            check = tk.IntVar(value=check)
-    except Exception:
-        #make the data
-        data = {'check': 0}
-        #open it and write to it
-        with open('settings.json', 'w') as f:
-            json.dump(data, f, indent=4)
-            check = 0
-            check = tk.IntVar(value=check)
     #the button
     auto_save = tk.Checkbutton(seting, text="auto save", variable=check, command=save_state)
     #pack them
@@ -134,14 +135,14 @@ def check_update(path):
             data = str(f.read())
             if data == editor.get("1.0", tk.END):
                 change = False
+            else:
+                change = True
 
-    #check if it is not already saving and if the data is changed
-    if change and not saving and check:
+    #check if it is not already saving and if the data is changed and if there is a path
+    if change and not saving and check.get() and path:
         #make saving to true and change to false
         saving = True
         change = False
-    #check if there is a path
-    if path and check.get():
         #start a thread
         threading.Thread(
             target=auto_save, 
@@ -154,7 +155,7 @@ settings_open = tk.Button(root, text="settings", command = open_settings)
 #the editor
 editor = tk.Text(root)
 #every time there is a key relese we update the file the user is in
-editor.bind("<KeyRelease>", lambda:check_update(file))
+editor.bind("<KeyRelease>", lambda e:check_update(file))
 #pack them
 settings_open.pack()
 in_path.pack()
