@@ -3,8 +3,8 @@ from tkinter import filedialog
 from tkinter import simpledialog
 from tkinter import messagebox
 import os
-import time
 import json
+import threading
 
 #start root
 root = tk.Tk()
@@ -14,6 +14,10 @@ root.geometry("500x500")
 #the folder and file vars
 folder = ''
 file = ''
+#check if the text has changed
+change = False
+#check if the file is saving
+saving = False
 
 #a label telling you which folder you are in
 in_path = tk.Label(root, text="folder path: None")
@@ -65,8 +69,16 @@ def make_file(folder2):
         create.config(text="error: no folder opened")
         root.after(3000, lambda: create.config(text="create file"))
 
+#make a function to get the check box state and save it
+def save_state():
+    global check
+    #open the settigns file a set the val to it
+    with open('settings.json', 'w') as f:
+        json.dump({'check': check.get()}, f, indent=4)
+
 #make a function that opens a settings window
 def open_settings():
+    global check, main_check
     #make a new window
     seting = tk.Toplevel(root)
     seting.title('settings')
@@ -86,34 +98,65 @@ def open_settings():
         with open('settings.json', 'r') as f:
             data = json.load(f)
             check = data['check']
+            check = tk.IntVar(value=check)
     except Exception:
         #make the data
-        data = {'check': False}
+        data = {'check': 0}
         #open it and write to it
-        with open(settings.json, 'w') as f:
+        with open('settings.json', 'w') as f:
             json.dump(data, f, indent=4)
-            check = False
+            check = 0
+            check = tk.IntVar(value=check)
     #the button
-    auto_save = tk.Checkbutton(seting, text="auto save", variable=check)
+    auto_save = tk.Checkbutton(seting, text="auto save", variable=check, command=save_state)
     #pack them
     delete_win.pack(side=tk.TOP, anchor="e")
     load_f.pack()
     load_fo.pack()
     save.pack()
+    auto_save.pack()
     create.pack()
+
+#a function that will be treaded to update a file every time it is different
+def auto_save(path,box):
+    global saving
+    #open the same file to write to it
+    with open(path, 'w') as f:
+        f.write(box.get("1.0", tk.END).strip())
+        saving = False
+
+#a function to call on auto save
+def check_update(path):
+    global saving, change, editor
+    #get the data from the file and check if it is the same
+    with open(path, 'r') as f:
+        data = str(f.read())
+        if data == editor.get("1.0", tk.END):
+            change = False
+
+    #check if it is not already saving and if the data is changed
+    if change and not saving and check:
+        #make saving to true and change to false
+        saving = True
+        change = False
+    #check if there is a path
+    if path and check:
+        #start a thread
+        threading.Thread(
+            target=auto_save, 
+            args=(path, editor), 
+            daemon=True
+            ).start()
 
 #a button to launch settings
 settings_open = tk.Button(root, text="settings", command = open_settings)
-#add a button to tell the user where the editor is make it a button so the user can remove it
-edit_lable = tk.Button(root, text="this is the editor \u2B07 \u2B07 \u2716")
 #the editor
 editor = tk.Text(root)
-#make it into a config
-edit_lable.config(command = edit_lable.destroy)
+#every time there is a key relese we update the file the user is in
+editor.bind("<KeyRelease>", lambda:check_update(file))
 #pack them
 settings_open.pack()
 in_path.pack()
-edit_lable.pack()
 editor.pack()
 #main loop
 root.mainloop()

@@ -1,4 +1,13 @@
 # what will be added
-- saving and loading files
-- a setting to enable auto save
 - custom shortcuts that let you navgate around without a mouse
+
+# what is added
+- a setting to enable auto save
+- saving and loading files
+- basic text editing
+- making files
+
+# why it is called cloud editor
+it is not called cloud editor because it is streamed to your computer
+it is called cloud editor because it runs as light as a cloud
+maybe not because it is made in python 
