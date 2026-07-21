@@ -10,7 +10,7 @@ import threading
 root = tk.Tk()
 #the main window
 root.title('cloud editor')
-root.geometry("500x500")
+root.geometry("500x600")
 #the folder and file vars
 folder = ''
 file = ''
@@ -18,6 +18,10 @@ file = ''
 change = False
 #check if the file is saving
 saving = False
+#check if settings is already open
+set_open = 0
+#a var called last modded
+lastm = 0.0 
 
 #a label telling you which folder you are in
 in_path = tk.Label(root, text="folder path: None")
@@ -39,7 +43,7 @@ except Exception:
 
 #make a function to get the file or folder
 def get_file(box = tk.Text, type= ""):
-    global file, folder
+    global file, folder, lastm
     if type == 'file':
         #get the users file path
         file = filedialog.askopenfilename(title = "load a file")
@@ -50,6 +54,7 @@ def get_file(box = tk.Text, type= ""):
                 data = f.read()
                 box.delete("1.0", tk.END)
                 box.insert("1.0", data)
+            lastm = os.path.getmtime(file)
     #if it is folder then we get a folder dir
     elif type == 'folder':
         folder = filedialog.askdirectory(title="Select a Folder to Use")
@@ -57,12 +62,13 @@ def get_file(box = tk.Text, type= ""):
         
 #make another function to save it
 def save_file(path, box = tk.Text):
-    global save
+    global save, lastm
     #open the same file to write to it
     with open(path, 'w') as f:
         save.config(text=f"saving to {f}")
         f.write(box.get("1.0", tk.END).strip())
         save.config(text="save")
+    lastm = os.path.getmtime(file)
 
 #make a function that will make a file
 def make_file(folder2):
@@ -93,38 +99,54 @@ def save_state():
 
 #make a function that opens a settings window
 def open_settings():
-    global check, main_check, save
-    #make a new window
-    seting = tk.Toplevel(root)
-    seting.title('settings')
-    seting.geometry("300x300")
-    #the load button means load file
-    load_f = tk.Button(seting, text='load file', command = lambda: get_file(editor, 'file'))
-    #another load button means load folder
-    load_fo = tk.Button(seting, text='load folder', command = lambda: get_file(editor, 'folder'))
-    #the save button
-    save = tk.Button(seting, text='save', command = lambda: save_file(file, editor))
-    #a create button
-    create = tk.Button(seting, text='create file', command = lambda: make_file(folder))
-    #a delete window button
-    delete_win = tk.Button(seting, text="\u2716", command = seting.destroy)
-    #the button
-    auto_save = tk.Checkbutton(seting, text="auto save", variable=check, command=save_state)
-    #pack them
-    delete_win.pack(side=tk.TOP, anchor="e")
-    load_f.pack()
-    load_fo.pack()
-    save.pack()
-    auto_save.pack()
-    create.pack()
+    global check, main_check, save, set_open, create
+    #make a function that makes set_open to 0 and destroys the window
+    def change_set():
+        global set_open
+        set_open = 0
+        seting.grab_release()
+        seting.destroy()
+    #tell us that settings is already open
+    if not set_open:
+        set_open = 1
+        #make a new window
+        seting = tk.Toplevel(root)
+        seting.title('settings')
+        seting.geometry("300x300")
+        #keep it at the top so the user uses it
+        seting.transient(root)
+        seting.grab_set()
+        seting.focus_set()
+        #the load button means load file
+        load_f = tk.Button(seting, text='load file', command = lambda: get_file(editor, 'file'))
+        #another load button means load folder
+        load_fo = tk.Button(seting, text='load folder', command = lambda: get_file(editor, 'folder'))
+        #the save button
+        save = tk.Button(seting, text='save', command = lambda: save_file(file, editor))
+        #a create button
+        create = tk.Button(seting, text='create file', command = lambda: make_file(folder))
+        #a delete window button
+        delete_win = tk.Button(seting, text="\u2716", command = change_set)
+        #the button
+        auto_save = tk.Checkbutton(seting, text="auto save", variable=check, command=save_state)
+        #pack them
+        delete_win.pack(side=tk.TOP, anchor="e")
+        load_f.pack()
+        load_fo.pack()
+        save.pack()
+        auto_save.pack()
+        create.pack()
+        #call it
+        seting.protocol("WM_DELETE_WINDOW", change_set)
 
 #a function that will be treaded to update a file every time it is different
 def auto_save(path,box):
-    global saving
+    global saving, lastm
     #open the same file to write to it
     with open(path, 'w') as f:
         f.write(box.get("1.0", tk.END).strip())
         saving = False
+    lastm = os.path.getmtime(file)
 
 #a function to call on auto save
 def check_update(path):
@@ -150,15 +172,29 @@ def check_update(path):
             daemon=True
             ).start()
 
+#make a function to see if the file is updated through a different editor
+def file_watch():
+    global lastm, saving, editor
+    #check if we have a file and we are not saing
+    if file and not saving:
+        
 #a button to launch settings
 settings_open = tk.Button(root, text="settings", command = open_settings)
+#make the frame where the editor goes
+eframe = tk.Frame(root) #means editor frame
+#make the scroll bar
+h_bar = tk.Scrollbar(eframe, orient=tk.HORIZONTAL)
 #the editor
-editor = tk.Text(root)
+editor = tk.Text(eframe, wrap=tk.NONE, xscrollcommand=h_bar.set)
+#make the config
+h_bar.config(command=editor.xview)
 #every time there is a key relese we update the file the user is in
 editor.bind("<KeyRelease>", lambda e:check_update(file))
 #pack them
 settings_open.pack()
 in_path.pack()
-editor.pack()
+eframe.pack(fill=tk.BOTH, expand=True)
+editor.pack(side=tk.TOP,fill=tk.BOTH, expand=True, pady = 10, padx = 10)
+h_bar.pack(side=tk.BOTTOM, fill=tk.X)
 #main loop
 root.mainloop()
